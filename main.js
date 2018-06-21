@@ -1,20 +1,16 @@
-main();
 
-//
-// Start here
-//
+
+/*
+ * Skyroads WebGL
+ * by Piotr Pokojowczyk
+ * piotrpokojowczyk@gmail.com
+ * http://pokojowczyk.pl/
+ */
 function main() {
+
   const canvas = document.querySelector('#glcanvas');
   const gl = canvas.getContext('webgl');
-
-  // If we don't have a GL context, give up now
-
-  if (!gl) {
-    alert('Unable to initialize WebGL. Your browser or machine may not support it.');
-    return;
-  }
-
-  // Vertex shader program
+  if ( !gl ) { alert('You software does NOT support WebGL'); return; } // WebGL is required.
 
   const vsSource = `
     attribute vec4 aVertexPosition;
@@ -26,12 +22,13 @@ function main() {
   `;
 
   // Fragment shader program
-
   const fsSource = `
     void main() {
       gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
     }
   `;
+
+  const roadBlocks = [];
 
   // Initialize a shader program; this is where all the lighting
   // for the vertices and so forth is established.
@@ -54,8 +51,47 @@ function main() {
   // Here's where we call the routine that builds all the
   // objects we'll be drawing.
   const buffers = initBuffers(gl);
+  var positions = [0, 0, 0, 0, 0, 0, 0, 0 ];
+  var frame = 0;
+  var maxFrames = 1000;
 
-  // Draw the scene
+  function renderRowOfRoadBlocks(){}
+  function animateRoadBlocks(){}
+
+  function updateRoadBlockPositions(positions){
+
+    var speedFactor = 1;
+
+    /* move all eight corners */
+    positions[0] += 0.015 * speedFactor;
+    positions[1] -= 0.01 * speedFactor;
+
+    positions[2] += 0.01 * speedFactor;
+    positions[3] -= 0.01 * speedFactor;
+
+    positions[4] += 0.035 * speedFactor;
+    positions[5] -= 0.02 * speedFactor;
+
+    positions[6] += 0.02 * speedFactor;
+    positions[7] -= 0.02 * speedFactor;
+  }
+
+  /* This function in final should animate one block */
+  function animateRoad(){
+
+    if ( frame == maxFrames ) return;
+
+    updateRoadBlockPositions(positions);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW)
+
+    drawScene(gl, programInfo, buffers);
+    frame++;
+    //requestAnimationFrame(animateRoad);
+  }
+
+  //requestAnimationFrame(animateRoad);
   drawScene(gl, programInfo, buffers);
 }
 
@@ -67,76 +103,52 @@ function main() {
 //
 function initBuffers(gl) {
 
-  // Create a buffer for the square's positions.
-
-  const positionBuffer = gl.createBuffer();
-
-  // Select the positionBuffer as the one to apply buffer
-  // operations to from here out.
-
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-
-  // Now create an array of positions for the square.
-
-  x = -1;
-
-  const positions = [
-    // 1,  1,
-    //-1,  1,
-    // 1, -1,
-    //-1, -1,
-    0.5, 0,
-    -0.5, 0,
-    2, -1,
-    -2, x
-  ];
-
-  // Now pass the list of positions into WebGL to build the
-  // shape. We do this by creating a Float32Array from the
-  // JavaScript array, then use it to fill the current buffer.
-
-  gl.bufferData(gl.ARRAY_BUFFER,
-                new Float32Array(positions),
-                gl.STATIC_DRAW);
-
-  return {
-    position: positionBuffer,
-  };
+  var trackBlocks = [];
+  var voffset = 0;
+  Tracks.currentTrack.forEach(function(row){
+    var hoffset = 0;
+    row.forEach(function(block){
+      if(block === '#'){
+        var buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        var positions = [0 + hoffset, 0 + voffset, -1 + hoffset, 0 + voffset, 0 + hoffset, -1 + voffset, -1 + hoffset, -1 + voffset]; // start from center
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+        trackBlocks.push(buffer);
+      }
+      hoffset += 1;
+    });
+    voffset += 1;
+  });
+  return trackBlocks;
 }
 
 //
 // Draw the scene.
 //
 function drawScene(gl, programInfo, buffers) {
-  gl.clearColor(0.0, 0.0, 0.0, 1.0);  // Clear to black, fully opaque
+
+  gl.useProgram(programInfo.program);
+  gl.clearColor(0.0, 0.0, 0.0, 0.5);  // Clear to black, fully opaque
   gl.clearDepth(1.0);                 // Clear everything
   gl.enable(gl.DEPTH_TEST);           // Enable depth testing
   gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
-
-  // Clear the canvas before we start drawing on it.
-
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  // Create a perspective matrix, a special matrix that is
-  // used to simulate the distortion of perspective in a camera.
-  // Our field of view is 45 degrees, with a width/height
-  // ratio that matches the display size of the canvas
-  // and we only want to see objects between 0.1 units
-  // and 100 units away from the camera.
+  for(var i in buffers){
 
-  const fieldOfView = 45 * Math.PI / 180;   // in radians
-  const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
-  const zNear = 0.1;
-  const zFar = 100.0;
-  const projectionMatrix = mat4.create();
+    const fieldOfView = 45 * Math.PI / 180;   // in radians
+    const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+    const zNear = 0.1;
+    const zFar = 100.0;
+    const projectionMatrix = mat4.create();
 
-  // note: glmatrix.js always has the first argument
-  // as the destination to receive the result.
-  mat4.perspective(projectionMatrix,
-                   fieldOfView,
-                   aspect,
-                   zNear,
-                   zFar);
+    // note: glmatrix.js always has the first argument
+    // as the destination to receive the result.
+    mat4.perspective(projectionMatrix,
+                     fieldOfView,
+                     aspect,
+                     zNear,
+                     zFar);
 
   // Set the drawing position to the "identity" point, which is
   // the center of the scene.
@@ -144,10 +156,9 @@ function drawScene(gl, programInfo, buffers) {
 
   // Now move the drawing position a bit to where we want to
   // start drawing the square.
-
   mat4.translate(modelViewMatrix,     // destination matrix
                  modelViewMatrix,     // matrix to translate
-                 [-0.0, 0.0, -6.0]);  // amount to translate
+                 [-5.0, -12.0, -40.0]);  // amount to translate
 
   // Tell WebGL how to pull out the positions from the position
   // buffer into the vertexPosition attribute.
@@ -157,7 +168,7 @@ function drawScene(gl, programInfo, buffers) {
     const normalize = false;
     const stride = 0;
     const offset = 0;
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers[i]);
     gl.vertexAttribPointer(
         programInfo.attribLocations.vertexPosition,
         numComponents,
@@ -171,7 +182,7 @@ function drawScene(gl, programInfo, buffers) {
 
   // Tell WebGL to use our program when drawing
 
-  gl.useProgram(programInfo.program);
+
 
   // Set the shader uniforms
 
@@ -188,6 +199,8 @@ function drawScene(gl, programInfo, buffers) {
     const offset = 0;
     const vertexCount = 4;
     gl.drawArrays(gl.TRIANGLE_STRIP, offset, vertexCount);
+  }
+
   }
 }
 
@@ -223,20 +236,56 @@ function loadShader(gl, type, source) {
   const shader = gl.createShader(type);
 
   // Send the source to the shader object
-
   gl.shaderSource(shader, source);
 
   // Compile the shader program
-
   gl.compileShader(shader);
 
   // See if it compiled successfully
-
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
     alert('An error occurred compiling the shaders: ' + gl.getShaderInfoLog(shader));
     gl.deleteShader(shader);
     return null;
   }
-
   return shader;
 }
+
+var Tracks = {
+  load: function(trackName = ''){
+
+    var self = this;
+    if ( !trackName ) { return false; }
+    var XHR = new XMLHttpRequest();
+    XHR.open('GET', '/lib/track-1.trk');
+    XHR.onreadystatechange = function(){
+      if (this.readyState == 4 && this.status == 200) {
+          self.prepareTrack(XHR.responseText);
+      }
+    }
+    XHR.send();
+  },
+  currentTrack: [], // keep current track here
+  prepareTrack: function(data){
+    var self = this;
+    // this functions converts the text file into track data
+    var tmp = data.split("\n");
+    var data = [];
+    for(var line in tmp){
+      var lineData = tmp[line];
+      var row = [];
+      var t;
+      for(t = 0; t < 7; t++){
+        if(lineData[t] && lineData[t] != ' '){
+          row[t] = lineData[t];
+        } else {
+          row[t] = null;
+        }
+      }
+      data.push(row);
+    }
+    self.currentTrack = data;
+    main();
+  }
+};
+
+Tracks.load('track-1');

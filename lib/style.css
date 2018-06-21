@@ -1,0 +1,42 @@
+body {
+  background: #181818;
+  padding: 0;
+  margin: 0;
+  text-align: center;
+  font-family: monospace;
+  font-size: 100%;
+}
+
+#title {
+  background-image: url('../lib/logo.png');
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center center;
+  position: absolute;
+  z-index: 10;
+  top: 60px;
+  margin: 0 auto;
+  height: 100px;
+  width: 100%;
+  -webkit-animation: mymove 5s;  /* Safari 4.0 - 8.0 */
+  -webkit-animation-fill-mode: forwards; /* Safari 4.0 - 8.0 */
+  animation: mymove 5s;
+  animation-fill-mode: forwards;
+}
+
+@keyframes mymove {
+  from {top: -40px; opacity: 0;}
+  to {top: 20px; opacity: 1;}
+}
+
+#game-background {
+  background-image: url('../lib/background-1.jpg');
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: 0 0;
+  position: relative;
+  display: inline-block;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+  top: 50px;
+  overflow: hidden;
+}
