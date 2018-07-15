@@ -45,3 +45,10 @@ body {
   width: 960px;
   height: 720px;
 }
+
+#vehicle {
+    position: absolute;
+    z-index: 99;
+    bottom: 50px;
+    margin-left: -58px;
+}
