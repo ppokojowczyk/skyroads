@@ -10,6 +10,7 @@
  "use strict";
 
  function main() {
+
    // Get A WebGL context
    /** @type {HTMLCanvasElement} */
    var canvas = document.getElementById("glcanvas");
@@ -17,6 +18,8 @@
    if (!gl) {
      return;
    }
+
+   var vehicle = null;
 
    var createFlattenedVertices = function(gl, vertices) {
      return webglUtils.createBufferInfoFromArrays(
@@ -42,7 +45,6 @@
      var translation = 0;
      Tracks.currentTrack.forEach(function(row){
        var hoffset = -3;
-       console.log(row);
        row.forEach(function(block){
          if(block === '#'){
            var buffer = createFlattenedVertices(gl, primitives.createRectangleVertices2(40, [hoffset, 0, voffset]));
@@ -81,18 +83,74 @@
      return matrix;
    }
 
+   // Render every object
+   trackBuffers.forEach(function(buff){
+     gl.useProgram(programInfo.program);
+     cubeUniforms.u_matrix = computeMatrix(viewProjectionMatrix, cubeTranslation, 0, 0);
+     webglUtils.setBuffersAndAttributes(gl, programInfo, buff);
+     webglUtils.setUniforms(programInfo, cubeUniforms);
+     gl.drawArrays(gl.TRIANGLES, 0, buff.numElements);
+   });
+
+   var vbuffer;
+   var aspect = 1;
+   var vertices = [
+      -0.5, 0.5 * aspect, 0.5, 0.5 * aspect,  0.5, -0.5 * aspect,
+      -0.5, 0.5 * aspect, 0.5,-0.5 * aspect, -0.5, -0.5 * aspect
+   ];
+             var textureCoords = [
+              0.0, 0.0,
+              1.0, 0.0,
+              1.0, 1.0,
+              0.0, 0.0,
+              1.0, 1.0,
+              0.0, 1.0,
+            ];
+
+  /* This function renders sprite of the vehicle */
+  function renderVehicle(gl){
+
+      var vehicle = gl.createTexture();
+      var numItems = 0;
+
+      var aVertexPosition = gl.getAttribLocation(programInfo.program, "aVertexPosition");
+      var aTextureCoord = gl.getAttribLocation(programInfo.program, "aTextureCoord");
+
+      gl.bindTexture(gl.TEXTURE_2D, vehicle);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, document.querySelector('#vehicle'));
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+      gl.generateMipmap(gl.TEXTURE_2D);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+
+      var vbuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, vbuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+      numItems = vertices.length / 2;
+
+      var tbuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, tbuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, textureCoords, gl.STATIC_DRAW);
+
+      aVertexPosition = gl.getAttribLocation(programInfo.program, "aVertexPosition");
+      gl.enableVertexAttribArray(aVertexPosition);
+
+      aTextureCoord = gl.getAttribLocation(programInfo.program, "aTextureCoord");
+      gl.enableVertexAttribArray(aTextureCoord);
+
+      var uSampler = gl.getUniformLocation(programInfo.program, "uSampler");
+
+      gl.drawArrays(gl.TRIANGLES, 0, numItems);
+  }
+
    // Draw the scene.
    function drawScene(time) {
-     time *= 0.0005;
 
-     webglUtils.resizeCanvasToDisplaySize(gl.canvas);
-
+     // webglUtils.resizeCanvasToDisplaySize(gl.canvas);
      // Tell WebGL how to convert from clip space to pixels
      gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-
      gl.enable(gl.CULL_FACE);
      gl.enable(gl.DEPTH_TEST);
-
      // Clear the canvas AND the depth buffer.
      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -108,25 +166,19 @@
 
      // Make a view matrix from the camera matrix.
      var viewMatrix = m4.inverse(cameraMatrix);
-
      var viewProjectionMatrix = m4.multiply(projectionMatrix, viewMatrix);
-     var cubeXRotation   = -time;
-     var cubeYRotation   =  time;
-
      cubeTranslation = [0, 0, (cubeTranslation[2] + 60)];
 
-     // render every object
+     // Render every object
      trackBuffers.forEach(function(buff){
        gl.useProgram(programInfo.program);
-       cubeUniforms.u_matrix = computeMatrix(
-           viewProjectionMatrix,
-           cubeTranslation,
-           cubeXRotation,
-           cubeYRotation);
+       cubeUniforms.u_matrix = computeMatrix(viewProjectionMatrix, cubeTranslation, 0, 0);
        webglUtils.setBuffersAndAttributes(gl, programInfo, buff);
        webglUtils.setUniforms(programInfo, cubeUniforms);
        gl.drawArrays(gl.TRIANGLES, 0, buff.numElements);
      });
+
+     renderVehicle(gl);
 
      requestAnimationFrame(drawScene);
    }

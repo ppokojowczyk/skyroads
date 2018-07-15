@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>MySecondGame</title>
+  </head>
+  <body>
+    <canvas width="1024" height="768"></canvas>
+
+    <div style="display: none;">
+      <img id="img-player" src="lib/vehicle-1.png" />
+    </div>
+
+    <script id="vertex" type="x-shader">
+      attribute vec2 aVertexPosition;
+
+      void main() {
+        gl_Position = vec4(aVertexPosition, 0.0, 1.0);
+      }
+    </script>
+    <script id="fragment" type="x-shader">
+      #ifdef GL_ES
+      precision highp float;
+      #endif
+
+      uniform vec4 uColor;
+
+      void main() {
+        gl_FragColor = uColor;
+      }
+    </script>
+
+    <script>
+
+
+
+
+
+      var game = {
+        game: function(canvas) {
+          _gl = canvas.getContext("webgl");
+          playerTexture = _gl.createTexture();
+          _gl.bindTexture(_gl.TEXTURE_2D, playerTexture);
+          _gl.texImage2D(_gl.TEXTURE_2D, 0, _gl.RGBA, _gl.RGBA, _gl.UNSIGNED_BYTE, document.querySelector('#img-player'));
+          _gl.texParameteri(_gl.TEXTURE_2D, _gl.TEXTURE_MAG_FILTER, _gl.NEAREST);
+          _gl.texParameteri(_gl.TEXTURE_2D, _gl.TEXTURE_MIN_FILTER, _gl.LINEAR_MIPMAP_NEAREST);
+          _gl.generateMipmap(_gl.TEXTURE_2D);
+          _gl.bindTexture(_gl.TEXTURE_2D, null);
+
+          var vsScript = document.querySelector('#vertex');
+          var vs = _gl.createShader(_gl.VERTEX_SHADER);
+          _gl.shaderSource(vs, vsScript.text);
+          _gl.compileShader(vs);
+
+          var fsScript = document.querySelector('#fragment');
+          var fs = _gl.createShader(_gl.FRAGMENT_SHADER);
+          _gl.shaderSource(fs, fsScript.text);
+          _gl.compileShader(fs);
+
+          var program = _gl.createProgram();
+          _gl.attachShader(program, vs);
+          _gl.attachShader(program, fs);
+          _gl.linkProgram(program);
+
+          if (!_gl.getShaderParameter(vs, _gl.COMPILE_STATUS))
+            print(_gl.getShaderInfoLog(vs));
+
+          if (!_gl.getShaderParameter(fs, _gl.COMPILE_STATUS))
+            print(_gl.getShaderInfoLog(fs));
+
+          if (!_gl.getProgramParameter(program, _gl.LINK_STATUS))
+            print(_gl.getProgramInfoLog(program));
+
+          var aspect = canvas.width / canvas.height;
+          var vertices = [
+            -0.5, 0.5 * aspect, 0.5, 0.5 * aspect,  0.5, -0.5 * aspect,  // Triangle 1
+            -0.5, 0.5 * aspect, 0.5,-0.5 * aspect, -0.5, -0.5 * aspect   // Triangle 2
+          ];
+
+          vbuffer = _gl.createBuffer();
+          _gl.bindBuffer(_gl.ARRAY_BUFFER, vbuffer);
+          _gl.bufferData(_gl.ARRAY_BUFFER, vertices, _gl.STATIC_DRAW);
+          numItems = vertices.length / 2;
+
+          _gl.useProgram(program);
+          var uColor = _gl.getUniformLocation(program, "uColor");
+          _gl.uniform4fv(uColor, [0.0, 0.3, 0.0, 1.0]);
+
+          var aVertexPosition = _gl.getAttribLocation(program, "aVertexPosition");
+          _gl.enableVertexAttribArray(aVertexPosition);
+          _gl.vertexAttribPointer(aVertexPosition, 2, _gl.FLOAT, false, 0, 0);
+
+          this._gameLoop();
+          // window.animationFrame.then(_gameLoop);
+        },
+        _gameLoop: function(time) {
+          elapsedTime = time;
+          game._update();
+          game._render();
+          //window.animationFrame.then(_gameLoop);
+          requestAnimationFrame(game._gameLoop)
+        },
+        _update: function() {
+          // Use sine curve for fading. Sine is -1-1, so tweak to be 0 - 1.
+          //fadeAmount = (sin(elapsedTime/1000) / 2) + 0.5;
+          fadeAmount = 1;
+        },
+        _render: function() {
+          // Set colour for clearing to.
+          _gl.clearColor(fadeAmount, 1 - fadeAmount, 0.0, 1.0);
+          // Clear.
+          // _gl.clear(RenderingContext.COLOR_BUFFER_BIT);
+          _gl.clear(_gl.COLOR_BUFFER_BIT | _gl.DEPTH_BUFFER_BIT);
+
+          _gl.bindTexture(_gl.TEXTURE_2D, playerTexture);
+          _gl.drawArrays(_gl.TRIANGLES, 5, numItems);
+          _gl.bindTexture(_gl.TEXTURE_2D, null);
+        }
+      };
+
+      game.game(document.querySelector('canvas'));
+    </script>
+  </body>
+</html>
